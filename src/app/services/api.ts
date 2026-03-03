@@ -36,7 +36,7 @@ export class ApiService {
   getSummary(
     age?: number,
     gender?: number,
-    region?: number,   // ✅ FIXED (was string)
+    region?: string,   // ✅ FIXED (was string)
     disease?: string
   ): Observable<SummaryResponse> {
 
