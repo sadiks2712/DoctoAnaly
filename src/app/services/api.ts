@@ -12,7 +12,7 @@ export interface MultiTrendPoint {
 }
 
 /* =================================
-   📊 SUMMARY MODEL (optional)
+   📊 SUMMARY MODEL
 ================================= */
 export interface SummaryResponse {
   total_records: number;
@@ -25,6 +25,7 @@ export interface SummaryResponse {
 })
 export class ApiService {
 
+  // ✅ Always use exact backend URL
   private baseUrl = 'https://doctoanalyai.onrender.com';
 
   constructor(private http: HttpClient) {}
@@ -35,15 +36,15 @@ export class ApiService {
   getSummary(
     age?: number,
     gender?: number,
-    region?: string,
+    region?: number,   // ✅ FIXED (was string)
     disease?: string
   ): Observable<SummaryResponse> {
 
     let params = new HttpParams();
 
-    if (age !== undefined) params = params.set('age', age);
-    if (gender !== undefined) params = params.set('gender', gender);
-    if (region) params = params.set('region', region);
+    if (age !== undefined) params = params.set('age', age.toString());
+    if (gender !== undefined) params = params.set('gender', gender.toString());
+    if (region !== undefined) params = params.set('region', region.toString());
     if (disease) params = params.set('disease', disease);
 
     return this.http.get<SummaryResponse>(
@@ -64,9 +65,11 @@ export class ApiService {
   ================================= */
   predictRisk(data: any): Observable<any> {
     const formData = new FormData();
-    formData.append('age', data.age);
-    formData.append('gender', data.gender);
-    formData.append('region', data.region);
+
+    // ✅ Ensure values are strings
+    formData.append('age', data.age.toString());
+    formData.append('gender', data.gender.toString());
+    formData.append('region', data.region.toString());
 
     return this.http.post(`${this.baseUrl}/predict`, formData);
   }
@@ -83,12 +86,11 @@ export class ApiService {
 
   /* =================================
      📈 MULTI-DISEASE TRENDS
-     ⭐ UPDATED FOR ENTERPRISE CHART
   ================================= */
   getDiseaseTrends(disease?: string): Observable<MultiTrendPoint[]> {
+
     let params = new HttpParams();
 
-    // optional filter support (future-ready)
     if (disease) {
       params = params.set('disease', disease);
     }
