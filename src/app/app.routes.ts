@@ -11,11 +11,18 @@ import { UploadComponent } from './upload/upload';
 
 export const routes: Routes = [
 
-  // 🌐 Public pages
-  { path: '', component: LandingComponent },
+  // 🔑 First page → Login
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
 
-  // 🔐 Protected app shell
+  // 🌐 Landing page (after login)
+  { 
+    path: 'landing', 
+    component: LandingComponent,
+    canActivate: [authGuard] 
+  },
+
+  // 🔐 Protected app shell (with navbar/layout)
   {
     path: '',
     component: MainLayoutComponent,
@@ -29,6 +36,6 @@ export const routes: Routes = [
     ]
   },
 
-  // fallback
-  { path: '**', redirectTo: '' }
+  // 🚫 fallback
+  { path: '**', redirectTo: 'login' }
 ];

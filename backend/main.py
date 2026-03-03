@@ -1,30 +1,43 @@
 from fastapi import FastAPI, Form, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from model import predict_risk, load_model
 from analysis import get_summary
 from quality import analyze_data_quality
 
-# Forecast imports
 from sklearn.linear_model import LinearRegression
 import numpy as np
 import pandas as pd
 import os
 
+# =====================================================
+# 🚀 APP INIT
+# =====================================================
 app = FastAPI(title="Healthcare Analytics API")
 
 # =====================================================
-# ✅ CORS (FINAL STABLE VERSION FOR NETLIFY + RENDER)
+# ✅ CORS CONFIG (LOCAL + DEPLOYED FRONTEND SAFE)
 # =====================================================
+origins = [
+    "http://localhost:4200",              # Angular local
+    "https://doctoanalyai.onrender.com",  # Backend self (optional)
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Allow all origins
-    allow_credentials=False,      # Must be False when using "*"
+    allow_origins=origins,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Optional: Handle preflight explicitly (extra safe)
+@app.options("/{full_path:path}")
+async def preflight_handler(full_path: str):
+    return JSONResponse(content={"message": "OK"})
+
 # =====================================================
-# 📁 Safe CSV Reader
+# 📁 SAFE CSV READER
 # =====================================================
 def read_csv_safe(path: str):
     try:
@@ -33,7 +46,7 @@ def read_csv_safe(path: str):
         return pd.read_csv(path, encoding="latin1")
 
 # =====================================================
-# 📁 Dataset Selector
+# 📁 DATASET SELECTOR
 # =====================================================
 def get_dataset_path():
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,14 +61,14 @@ def get_dataset_path():
     return default
 
 # =====================================================
-# ✅ Home
+# 🏠 HOME
 # =====================================================
 @app.get("/")
 def home():
-    return {"message": "Healthcare API running"}
+    return {"message": "Healthcare API running successfully"}
 
 # =====================================================
-# ✅ Summary
+# 📊 SUMMARY API
 # =====================================================
 @app.get("/summary")
 def summary(
@@ -64,10 +77,14 @@ def summary(
     region: int | None = None,
     disease: str | None = None,
 ):
-    return get_summary(age, gender, region, disease)
+    try:
+        return get_summary(age, gender, region, disease)
+    except Exception as e:
+        print("❌ Summary error:", e)
+        return {"error": "Summary failed"}
 
 # =====================================================
-# ✅ Risk Prediction
+# ⚕️ RISK PREDICTION API
 # =====================================================
 @app.post("/predict")
 def predict(
@@ -75,10 +92,14 @@ def predict(
     gender: int = Form(...),
     region: int = Form(...),
 ):
-    return predict_risk(age, gender, region)
+    try:
+        return predict_risk(age, gender, region)
+    except Exception as e:
+        print("❌ Prediction error:", e)
+        return {"error": "Prediction failed"}
 
 # =====================================================
-# 🚀 Forecast API
+# 📈 FORECAST API
 # =====================================================
 @app.get("/forecast")
 def forecast_cases():
@@ -116,7 +137,7 @@ def forecast_cases():
         return {"historical": [], "forecast": []}
 
 # =====================================================
-# 📈 Multi-Disease Trends API
+# 📊 MULTI-DISEASE TRENDS
 # =====================================================
 @app.get("/trends")
 def get_trends(disease: str | None = None):
@@ -130,21 +151,21 @@ def get_trends(disease: str | None = None):
         normalized_cols = {c.lower().strip(): c for c in df.columns}
 
         disease_col = None
-        for key in ["disease", "disease_name", "disease name", "condition", "illness", "diagnosis"]:
+        for key in ["disease", "disease_name", "condition", "diagnosis", "illness"]:
             if key in normalized_cols:
                 disease_col = normalized_cols[key]
                 break
 
-        if disease_col is None:
+        if not disease_col:
             return []
 
         date_col = None
-        for key in ["date", "month", "time", "year", "report_date"]:
+        for key in ["date", "month", "year", "time", "report_date"]:
             if key in normalized_cols:
                 date_col = normalized_cols[key]
                 break
 
-        if date_col is None:
+        if not date_col:
             df["time_index"] = df.index
             date_col = "time_index"
 
@@ -174,7 +195,7 @@ def get_trends(disease: str | None = None):
         return []
 
 # =====================================================
-# 🚀 Upload Dataset
+# 📤 UPLOAD DATASET
 # =====================================================
 @app.post("/upload-data")
 async def upload_data(file: UploadFile = File(...)):
@@ -184,7 +205,7 @@ async def upload_data(file: UploadFile = File(...)):
         os.makedirs(data_dir, exist_ok=True)
 
         if not file.filename.lower().endswith(".csv"):
-            return {"error": "Only CSV files are allowed"}
+            return {"error": "Only CSV files allowed"}
 
         file_path = os.path.join(data_dir, "healthcare.csv")
         contents = await file.read()
@@ -198,7 +219,7 @@ async def upload_data(file: UploadFile = File(...)):
         df = read_csv_safe(file_path)
 
         if df.empty:
-            return {"error": "CSV has no rows"}
+            return {"error": "CSV contains no data"}
 
         if len(df.columns) < 2:
             return {"error": "CSV must contain multiple columns"}
@@ -210,13 +231,12 @@ async def upload_data(file: UploadFile = File(...)):
             model_status = "reloaded"
         except Exception as e:
             print("⚠️ Model reload failed:", e)
-            model_status = "fallback_dummy"
+            model_status = "fallback"
 
         return {
             "message": "File uploaded successfully",
             "rows": int(len(df)),
             "columns": list(df.columns),
-            "status": "uploaded",
             "model_status": model_status,
             "quality": quality_report,
         }
