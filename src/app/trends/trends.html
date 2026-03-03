@@ -1,0 +1,33 @@
+<div class="trends-wrapper">
+  <div class="trends-card fade-up">
+
+    <h2 class="trend-title">
+      📈 Multi-Disease Trend Analysis
+    </h2>
+
+    @if (loading) {
+      <div class="loading">
+        <div class="loader"></div>
+        <span>Loading real-time data...</span>
+      </div>
+    }
+
+    @if (!loading && trendChartData.datasets.length) {
+      <div class="chart-wrap">
+        <canvas
+          baseChart
+          [data]="trendChartData"
+          [type]="trendChartType"
+          [options]="trendChartOptions">
+        </canvas>
+      </div>
+    }
+
+    @if (!loading && !trendChartData.datasets.length) {
+      <div class="empty-state">
+        📭 No trend data available
+      </div>
+    }
+
+  </div>
+</div>
