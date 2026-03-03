@@ -20,7 +20,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:4200",
         "http://127.0.0.1:4200",
-        "https://doctoanalayai.netlify.app",
+        "https://doctoanalyai.netlify.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
